@@ -7,11 +7,14 @@ import { checkAvailability, calculateValue, calculateSEOScore, exportToCSV, expo
 import type { DomainData } from '../utils/domainUtils';
 import { useDomainStorage } from '../hooks/useDomainStorage';
 import { useToast } from '../hooks/useToast';
-import { Loader2, Play, Download, FileJson, Target } from 'lucide-react';
+import { Loader2, Play, Download, FileJson, Target, ArrowUpDown } from 'lucide-react';
+
+type SortOption = 'best' | 'value' | 'seo' | 'availability';
 
 export function BulkSniper() {
     const [input, setInput] = useState('');
     const [results, setResults] = useState<DomainData[]>([]);
+    const [sortOption, setSortOption] = useState<SortOption>('best');
     const [isProcessing, setIsProcessing] = useState(false);
     const [progress, setProgress] = useState(0);
     const [stats, setStats] = useState({ available: 0, taken: 0, total: 0 });
@@ -19,6 +22,55 @@ export function BulkSniper() {
     const { saveDomain, isSaved } = useDomainStorage();
     const { toasts, addToast, removeToast } = useToast();
     const queueRef = useRef<string[]>([]);
+
+    // Calculate quality score for sorting (0-100)
+    const calculateQualityScore = (domain: DomainData): number => {
+        let score = 0;
+
+        // SEO Score (40 points)
+        score += (domain.seoScore || 0) * 0.4;
+
+        // Value (30 points) - normalize to 0-30
+        const maxValue = 50000;
+        score += Math.min(30, ((domain.price || 0) / maxValue) * 30);
+
+        // Radio Score (20 points)
+        const radioPoints = { A: 20, B: 10, C: 0 };
+        score += radioPoints[domain.radioScore] || 0;
+
+        // Availability bonus (10 points)
+        if (domain.status === 'available') score += 10;
+
+        return Math.round(score);
+    };
+
+    // Get sorted results
+    const getSortedResults = () => {
+        const sorted = [...results];
+
+        switch (sortOption) {
+            case 'best':
+                sorted.sort((a, b) => calculateQualityScore(b) - calculateQualityScore(a));
+                break;
+            case 'value':
+                sorted.sort((a, b) => (b.price || 0) - (a.price || 0));
+                break;
+            case 'seo':
+                sorted.sort((a, b) => (b.seoScore || 0) - (a.seoScore || 0));
+                break;
+            case 'availability':
+                sorted.sort((a, b) => {
+                    if (a.status === 'available' && b.status !== 'available') return -1;
+                    if (a.status !== 'available' && b.status === 'available') return 1;
+                    return 0;
+                });
+                break;
+        }
+
+        return sorted;
+    };
+
+    const sortedResults = getSortedResults();
 
     const handleStart = () => {
         const domains = input.split(/[\n,]+/).map(d => d.trim()).filter(d => d.length > 0);
@@ -161,6 +213,20 @@ export function BulkSniper() {
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
+                            {/* Sort Dropdown */}
+                            <div className="flex items-center gap-2 mr-2">
+                                <ArrowUpDown className="text-slate-500" size={16} />
+                                <select
+                                    value={sortOption}
+                                    onChange={(e) => setSortOption(e.target.value as SortOption)}
+                                    className="px-3 py-2 rounded-lg glass border-2 border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-700 dark:text-slate-300 focus:border-primary-500 outline-none cursor-pointer"
+                                >
+                                    <option value="best">🏆 Best First</option>
+                                    <option value="value">💰 Highest Value</option>
+                                    <option value="seo">⭐ Best SEO</option>
+                                    <option value="availability">✅ Available First</option>
+                                </select>
+                            </div>
                             <button
                                 onClick={() => {
                                     exportToCSV(results);
@@ -191,16 +257,28 @@ export function BulkSniper() {
                         <SkeletonCard key={i} />
                     ))}
 
-                    {results.map((domain) => (
-                        <DomainCard
-                            key={domain.name}
-                            data={domain}
-                            isSaved={isSaved(domain.name)}
-                            onToggleSave={() => {
-                                saveDomain(domain);
-                                addToast(isSaved(domain.name) ? 'Removed from portfolio' : 'Added to portfolio!', 'success');
-                            }}
-                        />
+                    {sortedResults.map((domain, index) => (
+                        <div key={domain.name} className="relative">
+                            {/* Top 3 Ranking Badges (only for "best" sort) */}
+                            {sortOption === 'best' && index < 3 && (
+                                <div className="absolute -left-3 -top-3 z-10">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-lg ${index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 animate-pulse' :
+                                        index === 1 ? 'bg-gradient-to-br from-slate-300 to-slate-500' :
+                                            'bg-gradient-to-br from-orange-400 to-orange-600'
+                                        }`}>
+                                        {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                                    </div>
+                                </div>
+                            )}
+                            <DomainCard
+                                data={domain}
+                                isSaved={isSaved(domain.name)}
+                                onToggleSave={() => {
+                                    saveDomain(domain);
+                                    addToast(isSaved(domain.name) ? 'Removed from portfolio' : 'Added to portfolio!', 'success');
+                                }}
+                            />
+                        </div>
                     ))}
                 </div>
             </div>
