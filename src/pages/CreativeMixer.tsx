@@ -1,100 +1,152 @@
 import { useState } from 'react';
 import { Layout } from '../components/Layout';
 import { DomainCard } from '../components/DomainCard';
-import { checkAvailability, calculateValue } from '../utils/domainUtils';
+import { ToastContainer } from '../components/Toast';
+import { checkAvailability, calculateValue, calculateSEOScore } from '../utils/domainUtils';
 import type { DomainData } from '../utils/domainUtils';
 import { useDomainStorage } from '../hooks/useDomainStorage';
-import { Zap } from 'lucide-react';
+import { useToast } from '../hooks/useToast';
+import { Zap, Sparkles } from 'lucide-react';
 
 export function CreativeMixer() {
     const [prefix, setPrefix] = useState('');
     const [keyword, setKeyword] = useState('');
     const [suffix, setSuffix] = useState('');
     const [results, setResults] = useState<DomainData[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
 
     const { saveDomain, isSaved } = useDomainStorage();
+    const { toasts, addToast, removeToast } = useToast();
+
+    const suggestedPrefixes = ['Get', 'My', 'The', 'Go', 'Try', 'Find', 'Use'];
+    const suggestedSuffixes = ['Hub', 'Lab', 'HQ', 'Pro', 'App', 'Tech', 'AI'];
 
     const handleMix = async () => {
-        const combinations = [];
+        if (!keyword) {
+            addToast('Please enter a keyword', 'error');
+            return;
+        }
+
+        setIsLoading(true);
+        const combinations: string[] = [];
+
+        // Generate combinations
         if (prefix && keyword) combinations.push(`${prefix}${keyword}.com`);
         if (keyword && suffix) combinations.push(`${keyword}${suffix}.com`);
         if (prefix && keyword && suffix) combinations.push(`${prefix}${keyword}${suffix}.com`);
-
-        // Also try swapping
         if (prefix && keyword) combinations.push(`${keyword}${prefix}.com`);
+        if (keyword) combinations.push(`${keyword}.com`, `${keyword}.io`, `${keyword}.ai`);
 
         const data: DomainData[] = combinations.map(name => ({
             name,
             status: 'unknown',
             ...calculateValue(name),
+            seoScore: calculateSEOScore(name),
             length: name.length,
-            tld: 'com'
+            tld: name.split('.').pop() || ''
         }));
 
         setResults(data);
 
-        // Check availability for all (small batch, so okay to do parallel or sequential)
-        // For better UX, let's just check them all
+        // Check availability
         const checked = await Promise.all(data.map(async d => ({
             ...d,
             status: await checkAvailability(d.name)
         })));
 
         setResults(checked);
+        setIsLoading(false);
+        addToast(`Generated ${checked.length} domain combinations!`, 'success');
     };
 
     return (
         <Layout>
-            <div className="max-w-3xl mx-auto">
+            <ToastContainer toasts={toasts} onClose={removeToast} />
+
+            <div className="max-w-4xl mx-auto">
+                {/* Header */}
                 <div className="text-center mb-10">
-                    <h1 className="text-3xl font-bold text-slate-900 mb-2">Creative Mixer</h1>
-                    <p className="text-slate-600">Combine words to discover hidden gems.</p>
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                        <Zap className="text-primary-600 dark:text-primary-400" size={36} />
+                        <h1 className="text-4xl font-display font-bold">
+                            <span className="gradient-text">Creative</span>{' '}
+                            <span className="text-slate-900 dark:text-white">Mixer</span>
+                        </h1>
+                    </div>
+                    <p className="text-lg text-slate-600 dark:text-slate-400">
+                        Combine words creatively to discover unique domain gems.
+                    </p>
                 </div>
 
-                <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 mb-10">
+                {/* Mixer Card */}
+                <div className="glass-strong p-8 rounded-2xl shadow-glow-sm mb-10">
+                    {/* Word Inputs */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Prefix</label>
+                            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Prefix (Optional)</label>
                             <input
                                 type="text"
                                 value={prefix}
                                 onChange={(e) => setPrefix(e.target.value)}
-                                placeholder="e.g. Get, Go, My"
-                                className="w-full p-3 rounded-lg bg-slate-50 border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                                placeholder="Get, My, The..."
+                                className="w-full p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 focus:border-primary-500 outline-none text-slate-900 dark:text-white"
                             />
+                            <div className="flex flex-wrap gap-1 mt-2">
+                                {suggestedPrefixes.map(p => (
+                                    <button
+                                        key={p}
+                                        onClick={() => setPrefix(p)}
+                                        className="px-2 py-1 text-xs bg-slate-100 dark:bg-slate-800 hover:bg-primary-100 dark:hover:bg-primary-900/20 text-slate-600 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 rounded transition-all"
+                                    >
+                                        {p}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Keyword</label>
+                            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Keyword *</label>
                             <input
                                 type="text"
                                 value={keyword}
                                 onChange={(e) => setKeyword(e.target.value)}
-                                placeholder="e.g. Flow, Agent"
-                                className="w-full p-3 rounded-lg bg-blue-50 border border-blue-200 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-blue-900"
+                                placeholder="Flow, Agent..."
+                                className="w-full p-3 rounded-lg bg-primary-50 dark:bg-primary-900/20 border-2 border-primary-200 dark:border-primary-800 focus:border-primary-500 outline-none font-bold text-primary-900 dark:text-primary-100"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Suffix</label>
+                            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Suffix (Optional)</label>
                             <input
                                 type="text"
                                 value={suffix}
                                 onChange={(e) => setSuffix(e.target.value)}
-                                placeholder="e.g. Hub, Lab, HQ"
-                                className="w-full p-3 rounded-lg bg-slate-50 border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                                placeholder="Hub, Lab, HQ..."
+                                className="w-full p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 focus:border-primary-500 outline-none text-slate-900 dark:text-white"
                             />
+                            <div className="flex flex-wrap gap-1 mt-2">
+                                {suggestedSuffixes.map(s => (
+                                    <button
+                                        key={s}
+                                        onClick={() => setSuffix(s)}
+                                        className="px-2 py-1 text-xs bg-slate-100 dark:bg-slate-800 hover:bg-primary-100 dark:hover:bg-primary-900/20 text-slate-600 dark:text-slate-400 hover:text-primary-600 dark:hover:text-primary-400 rounded transition-all"
+                                    >
+                                        {s}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
                     <button
                         onClick={handleMix}
-                        disabled={!keyword}
-                        className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-slate-300 text-white p-4 rounded-xl font-bold transition-all shadow-md flex items-center justify-center gap-2"
+                        disabled={!keyword || isLoading}
+                        className="w-full btn-primary p-4 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <Zap size={20} />
-                        Generate Combinations
+                        <Sparkles size={20} />
+                        {isLoading ? 'Mixing...' : 'Generate Combinations'}
                     </button>
                 </div>
 
+                {/* Results */}
                 <div className="space-y-4">
                     {results.map((domain) => (
                         <DomainCard

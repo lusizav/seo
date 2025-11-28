@@ -5,6 +5,8 @@ export interface DomainData {
     radioScore: 'A' | 'B' | 'C';
     length: number;
     tld: string;
+    seoScore?: number; // 0-100
+    trend?: 'up' | 'down' | 'stable';
 }
 
 export const GEO_PRESETS = {
@@ -83,4 +85,81 @@ export function generateVariations(
     });
 
     return Array.from(variations);
+}
+
+// SEO Score Calculator (0-100)
+export function calculateSEOScore(domain: string): number {
+    let score = 50;
+    const lower = domain.toLowerCase();
+    const name = lower.split('.')[0];
+    const tld = lower.split('.').pop() || '';
+
+    // Length bonus
+    if (name.length <= 8) score += 15;
+    else if (name.length <= 12) score += 10;
+    else score -= 5;
+
+    // TLD bonus
+    if (tld === 'com') score += 15;
+    else if (['io', 'ai', 'co'].includes(tld)) score += 10;
+    else if (['org', 'net'].includes(tld)) score += 5;
+
+    // Keyword relevance
+    const seoKeywords = ['app', 'tech', 'ai', 'web', 'digital', 'smart', 'cloud', 'hub', 'pro', 'best', 'top'];
+    if (seoKeywords.some(k => name.includes(k))) score += 15;
+
+    // No numbers/hyphens bonus
+    if (!/[0-9-]/.test(name)) score += 10;
+
+    return Math.min(100, Math.max(0, score));
+}
+
+// Get similar domain suggestions
+export function getSimilarDomains(domain: string): string[] {
+    const base = domain.split('.')[0];
+    const tld = domain.split('.').pop() || 'com';
+
+    const similar: string[] = [];
+    const variations = ['get', 'my', 'the', 'app', 'hub', 'hq', 'pro', 'go'];
+
+    variations.forEach(v => {
+        similar.push(`${v}${base}.${tld}`);
+        similar.push(`${base}${v}.${tld}`);
+    });
+
+    // Different TLDs
+    ['io', 'ai', 'co', 'app'].forEach(altTld => {
+        if (altTld !== tld) similar.push(`${base}.${altTld}`);
+    });
+
+    return similar.slice(0, 6);
+}
+
+// Export utilities
+export function exportToCSV(domains: DomainData[]): void {
+    const csvContent = "data:text/csv;charset=utf-8,"
+        + "Domain,Status,Est. Value,Radio Score,SEO Score,Length,TLD\n"
+        + domains.map(d =>
+            `${d.name},${d.status},$${d.price},${d.radioScore},${d.seoScore || 'N/A'},${d.length},${d.tld}`
+        ).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `domkiller_export_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+export function exportToJSON(domains: DomainData[]): void {
+    const dataStr = JSON.stringify(domains, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+
+    const link = document.createElement('a');
+    link.setAttribute('href', dataUri);
+    link.setAttribute('download', `domkiller_export_${Date.now()}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }

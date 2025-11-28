@@ -1,61 +1,143 @@
 import { Layout } from '../components/Layout';
 import { DomainCard } from '../components/DomainCard';
+import { StatCard } from '../components/StatCard';
+import { ToastContainer } from '../components/Toast';
 import { useDomainStorage } from '../hooks/useDomainStorage';
-import { Download, Trash2 } from 'lucide-react';
+import { useToast } from '../hooks/useToast';
+import { exportToCSV, exportToJSON } from '../utils/domainUtils';
+import { Download, FileJson, Briefcase, DollarSign, TrendingUp, Target } from 'lucide-react';
 
 export function Portfolio() {
     const { savedDomains, saveDomain } = useDomainStorage();
+    const { toasts, addToast, removeToast } = useToast();
 
-    const handleExport = () => {
-        const csvContent = "data:text/csv;charset=utf-8,"
-            + "Domain,Status,Est. Value,Radio Score\n"
-            + savedDomains.map(d => `${d.name},${d.status},${d.price},${d.radioScore}`).join("\n");
+    const totalValue = savedDomains.reduce((sum, d) => sum + (d.price || 0), 0);
+    const avgValue = savedDomains.length > 0 ? Math.round(totalValue / savedDomains.length) : 0;
+    const availableCount = savedDomains.filter(d => d.status === 'available').length;
 
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "my_domains.csv");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    const handleExportCSV = () => {
+        if (savedDomains.length === 0) {
+            addToast('No domains to export', 'error');
+            return;
+        }
+        exportToCSV(savedDomains);
+        addToast('Portfolio exported to CSV!', 'success');
+    };
+
+    const handleExportJSON = () => {
+        if (savedDomains.length === 0) {
+            addToast('No domains to export', 'error');
+            return;
+        }
+        exportToJSON(savedDomains);
+        addToast('Portfolio exported to JSON!', 'success');
     };
 
     return (
         <Layout>
-            <div className="max-w-4xl mx-auto">
-                <div className="flex items-center justify-between mb-8">
-                    <div>
-                        <h1 className="text-3xl font-bold text-slate-900 mb-2">My Portfolio</h1>
-                        <p className="text-slate-600">Manage your saved domains and export for outreach.</p>
+            <ToastContainer toasts={toasts} onClose={removeToast} />
+
+            <div className="max-w-6xl mx-auto">
+                {/* Header */}
+                <div className="text-center mb-10">
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                        <Briefcase className="text-primary-600 dark:text-primary-400" size={36} />
+                        <h1 className="text-4xl font-display font-bold">
+                            <span className="gradient-text">My</span>{' '}
+                            <span className="text-slate-900 dark:text-white">Portfolio</span>
+                        </h1>
                     </div>
-                    <button
-                        onClick={handleExport}
-                        disabled={savedDomains.length === 0}
-                        className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-medium transition-colors"
-                    >
-                        <Download size={18} />
-                        Export CSV
-                    </button>
+                    <p className="text-lg text-slate-600 dark:text-slate-400">
+                        Manage your saved domains and track their value.
+                    </p>
                 </div>
 
                 {savedDomains.length > 0 ? (
-                    <div className="space-y-4">
-                        {savedDomains.map((domain) => (
-                            <DomainCard
-                                key={domain.name}
-                                data={domain}
-                                isSaved={true}
-                                onToggleSave={() => saveDomain(domain)}
+                    <>
+                        {/* Stats Dashboard */}
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                            <StatCard
+                                icon={Target}
+                                label="Total Domains"
+                                value={savedDomains.length}
+                                color="green"
                             />
-                        ))}
-                    </div>
-                ) : (
-                    <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-slate-300">
-                        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
-                            <Trash2 size={32} />
+                            <StatCard
+                                icon={DollarSign}
+                                label="Total Value"
+                                value={totalValue.toLocaleString()}
+                                valuePrefix="$"
+                                color="blue"
+                            />
+                            <StatCard
+                                icon={TrendingUp}
+                                label="Average Value"
+                                value={avgValue.toLocaleString()}
+                                valuePrefix="$"
+                                color="purple"
+                            />
+                            <StatCard
+                                icon={Briefcase}
+                                label="Available"
+                                value={availableCount}
+                                color="orange"
+                            />
                         </div>
-                        <h3 className="text-lg font-medium text-slate-900 mb-1">No saved domains yet</h3>
-                        <p className="text-slate-500">Star domains from the generator to add them here.</p>
+
+                        {/* Toolbar */}
+                        <div className="flex items-center justify-between mb-6 glass-strong p-4 rounded-xl">
+                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                {savedDomains.length} domains in portfolio
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleExportCSV}
+                                    className="flex items-center gap-2 px-4 py-2 glass hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-sm font-medium transition-all"
+                                >
+                                    <Download size={16} />
+                                    Export CSV
+                                </button>
+                                <button
+                                    onClick={handleExportJSON}
+                                    className="flex items-center gap-2 px-4 py-2 glass hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-sm font-medium transition-all"
+                                >
+                                    <FileJson size={16} />
+                                    Export JSON
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Domains List */}
+                        <div className="space-y-4">
+                            {savedDomains.map((domain) => (
+                                <DomainCard
+                                    key={domain.name}
+                                    data={domain}
+                                    isSaved={true}
+                                    onToggleSave={() => {
+                                        saveDomain(domain);
+                                        addToast('Removed from portfolio', 'success');
+                                    }}
+                                />
+                            ))}
+                        </div>
+                    </>
+                ) : (
+                    <div className="text-center py-20 glass-strong rounded-2xl">
+                        <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb6 animate-float">
+                            <Briefcase className="text-slate-400" size={40} />
+                        </div>
+                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">No saved domains yet</h3>
+                        <p className="text-slate-600 dark:text-slate-400 mb-6">
+                            Start building your portfolio by saving domains from the generator!
+                        </p>
+                        <a
+                            href="/"
+                            className="inline-flex items-center gap-2 btn-primary"
+                        >
+                            <Target size={20} />
+                            Go to Generator
+                        </a>
                     </div>
                 )}
             </div>

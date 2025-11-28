@@ -1,15 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --color-primary: 34 197 94;
+    --color-primary-dark: 22 163 74;
+    --gradient-primary: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    --gradient-hero: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 50%, #a7f3d0 100%);
+    --gradient-dark: linear-gradient(135deg, #064e3b 0%, #022c22 100%);
+  }
+
+  * {
+    @apply transition-colors duration-300;
+  }
+
   body {
-    @apply bg-slate-50 text-slate-900;
+    @apply bg-gradient-to-br from-slate-50 via-emerald-50/30 to-slate-50 text-slate-900 font-sans;
+  }
+
+  body.dark {
+    @apply bg-gradient-to-br from-slate-950 via-emerald-950/40 to-slate-950 text-slate-100;
+  }
+
+  /* Smooth theme transition */
+  body * {
+    transition-property: background-color, border-color, color, fill, stroke;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-4 rounded-xl transition-colors;
+    @apply bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-bold py-2.5 px-6 rounded-xl transition-all shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40 hover:scale-105 active:scale-95;
+  }
+
+  .glass {
+    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/50 dark:border-slate-700/50;
+  }
+
+  .glass-strong {
+    @apply bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200 dark:border-slate-700;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary-600 to-emerald-600 bg-clip-text text-transparent;
+  }
+
+  /* Shimmer effect for skeletons */
+  .shimmer {
+    background: linear-gradient(90deg,
+        rgba(226, 232, 240, 0.3) 0%,
+        rgba(226, 232, 240, 0.6) 50%,
+        rgba(226, 232, 240, 0.3) 100%);
+    background-size: 1000px 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  .dark .shimmer {
+    background: linear-gradient(90deg,
+        rgba(51, 65, 85, 0.3) 0%,
+        rgba(51, 65, 85, 0.6) 50%,
+        rgba(51, 65, 85, 0.3) 100%);
   }
 }
