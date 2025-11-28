@@ -198,28 +198,29 @@ export function BulkSniper() {
 
                 {/* Toolbar */}
                 {results.length > 0 && !isProcessing && (
-                    <div className="flex items-center justify-between mb-6 glass-strong p-4 rounded-xl">
-                        <div className="flex items-center gap-6">
-                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    <div className="glass-strong p-4 rounded-xl mb-6 space-y-3">
+                        {/* Stats Row */}
+                        <div className="flex flex-wrap items-center gap-4 text-sm">
+                            <span className="font-semibold text-slate-700 dark:text-slate-300">
                                 {results.length} results
                             </span>
-                            <div className="flex items-center gap-4 text-sm">
-                                <span className="text-primary-600 dark:text-primary-400 font-semibold">
-                                    ✓ {stats.available} Available
-                                </span>
-                                <span className="text-red-600 dark:text-red-400 font-semibold">
-                                    ✗ {stats.taken} Taken
-                                </span>
-                            </div>
+                            <span className="text-primary-600 dark:text-primary-400 font-semibold">
+                                ✓ {stats.available} Available
+                            </span>
+                            <span className="text-red-600 dark:text-red-400 font-semibold">
+                                ✗ {stats.taken} Taken
+                            </span>
                         </div>
-                        <div className="flex items-center gap-2">
+
+                        {/* Actions Row */}
+                        <div className="flex flex-wrap items-center gap-2">
                             {/* Sort Dropdown */}
-                            <div className="flex items-center gap-2 mr-2">
-                                <ArrowUpDown className="text-slate-500" size={16} />
+                            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                                <ArrowUpDown className="text-slate-500 flex-shrink-0" size={16} />
                                 <select
                                     value={sortOption}
                                     onChange={(e) => setSortOption(e.target.value as SortOption)}
-                                    className="px-3 py-2 rounded-lg glass border-2 border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-700 dark:text-slate-300 focus:border-primary-500 outline-none cursor-pointer"
+                                    className="flex-1 px-3 py-2 rounded-lg glass border-2 border-slate-200 dark:border-slate-700 text-sm font-medium text-slate-700 dark:text-slate-300 focus:border-primary-500 outline-none cursor-pointer"
                                 >
                                     <option value="best">🏆 Best First</option>
                                     <option value="value">💰 Highest Value</option>
